@@ -1,0 +1,21 @@
+# Служебные файлы
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Редакторы
+.vscode/
+.idea/
+*.swp
+
+# Зависимости и сборка — в проекте не используются, на случай случайной установки
+node_modules/
+package.json
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+
+# Логи
+*.log
