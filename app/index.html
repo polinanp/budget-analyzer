@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Анализ трат</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    (function () {
+      let theme = null;
+      try {
+        theme = localStorage.getItem("budget.theme");
+      } catch (error) {
+        theme = null;
+      }
+      if (theme !== "light" && theme !== "dark") {
+        theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <script defer src="js/store.js"></script>
+  <script defer src="js/periods.js"></script>
+  <script defer src="js/charts.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">₽</span>
+        <div>
+          <h1>Анализ трат</h1>
+          <p class="brand-subtitle">Расходы за неделю, месяц, год или свой период</p>
+        </div>
+      </div>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">
+        <span class="theme-toggle-icon" aria-hidden="true"></span>
+        <span id="theme-toggle-label">Тёмная тема</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container" id="main">
+    <section class="empty-banner" id="empty-banner" hidden>
+      <div>
+        <h2>Пока нет ни одной траты</h2>
+        <p>Добавьте первую трату в форме или загрузите пример, чтобы посмотреть, как работают отчёты.</p>
+      </div>
+      <div class="empty-actions">
+        <button type="button" class="button" id="empty-add-button">Добавить трату</button>
+        <button type="button" class="button secondary" id="demo-button">Заполнить примерами</button>
+      </div>
+    </section>
+
+    <section class="period-panel" aria-label="Выбор периода">
+      <div class="period-tabs" id="period-tabs" role="group" aria-label="Тип периода">
+        <button type="button" class="period-tab" data-mode="week" aria-pressed="false">Неделя</button>
+        <button type="button" class="period-tab" data-mode="month" aria-pressed="true">Месяц</button>
+        <button type="button" class="period-tab" data-mode="year" aria-pressed="false">Год</button>
+        <button type="button" class="period-tab" data-mode="custom" aria-pressed="false">Свой период</button>
+      </div>
+
+      <div class="period-nav" id="period-nav">
+        <button type="button" class="icon-button" id="period-prev" aria-label="Предыдущий период">←</button>
+        <p class="period-label" id="period-label">—</p>
+        <button type="button" class="icon-button" id="period-next" aria-label="Следующий период">→</button>
+      </div>
+
+      <form class="custom-range" id="custom-range" hidden novalidate>
+        <label class="custom-field">
+          <span>С</span>
+          <input type="date" id="custom-start">
+        </label>
+        <label class="custom-field">
+          <span>По</span>
+          <input type="date" id="custom-end">
+        </label>
+        <button type="submit" class="button secondary">Показать</button>
+      </form>
+
+      <p class="field-error" id="period-error" role="alert" hidden></p>
+    </section>
+
+    <div class="dashboard">
+      <div class="dashboard-main">
+        <section class="summary" aria-label="Сводка за период">
+          <article class="card stat">
+            <p class="stat-label">Итого за период</p>
+            <p class="stat-value" id="stat-total">0 ₽</p>
+            <p class="stat-hint" id="stat-total-hint"></p>
+          </article>
+          <article class="card stat">
+            <p class="stat-label">В среднем в день</p>
+            <p class="stat-value" id="stat-average">0 ₽</p>
+            <p class="stat-hint" id="stat-average-hint"></p>
+          </article>
+          <article class="card stat">
+            <p class="stat-label">Главная категория</p>
+            <p class="stat-value" id="stat-category">—</p>
+            <p class="stat-hint" id="stat-category-hint"></p>
+          </article>
+          <article class="card stat" id="stat-compare-card">
+            <p class="stat-label">К прошлому периоду</p>
+            <p class="stat-value" id="stat-compare">—</p>
+            <p class="stat-hint" id="stat-compare-hint"></p>
+          </article>
+        </section>
+
+        <div class="charts-grid">
+          <section class="card chart-card" aria-labelledby="donut-title">
+            <div class="card-head">
+              <h2 id="donut-title">По категориям</h2>
+              <p class="card-subtitle" id="donut-subtitle"></p>
+            </div>
+            <div class="donut-wrap">
+              <div class="donut" id="donut"></div>
+              <ul class="donut-legend" id="donut-legend"></ul>
+            </div>
+            <p class="empty-note" id="donut-empty" hidden>Нет трат за этот период.</p>
+          </section>
+
+          <section class="card chart-card" aria-labelledby="bars-title">
+            <div class="card-head">
+              <h2 id="bars-title">Динамика</h2>
+              <p class="card-subtitle" id="bars-subtitle"></p>
+            </div>
+            <div class="bars" id="bars"></div>
+            <p class="empty-note" id="bars-empty" hidden>Нет трат за этот период.</p>
+          </section>
+        </div>
+
+        <section class="card" aria-labelledby="categories-title">
+          <div class="card-head">
+            <h2 id="categories-title">Расходы по категориям</h2>
+            <p class="card-subtitle" id="categories-subtitle"></p>
+          </div>
+          <ul class="category-list" id="category-list"></ul>
+          <p class="empty-note" id="category-empty" hidden>Нет трат за этот период.</p>
+        </section>
+
+        <section class="card" aria-labelledby="tx-title">
+          <div class="card-head">
+            <h2 id="tx-title">Траты за период</h2>
+            <p class="card-subtitle" id="tx-count"></p>
+          </div>
+          <div class="table-wrap">
+            <table class="tx-table" id="tx-table">
+              <thead>
+                <tr>
+                  <th scope="col">Дата</th>
+                  <th scope="col">Категория</th>
+                  <th scope="col">Комментарий</th>
+                  <th scope="col" class="num">Сумма</th>
+                  <th scope="col"><span class="visually-hidden">Действия</span></th>
+                </tr>
+              </thead>
+              <tbody id="tx-body"></tbody>
+            </table>
+          </div>
+          <p class="empty-note" id="tx-empty" hidden>Нет трат за этот период. Добавьте трату в форме.</p>
+        </section>
+      </div>
+
+      <aside class="dashboard-side">
+        <section class="card form-card" aria-labelledby="form-title">
+          <h2 id="form-title">Новая трата</h2>
+          <form id="tx-form" novalidate>
+            <div class="field">
+              <label for="amount">Сумма, ₽</label>
+              <input id="amount" name="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-describedby="amount-error">
+              <p class="field-error" id="amount-error" role="alert" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="category">Категория</label>
+              <select id="category" name="category"></select>
+              <p class="field-error" id="category-error" role="alert" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="date">Дата</label>
+              <input id="date" name="date" type="date">
+              <p class="field-error" id="date-error" role="alert" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="note">Комментарий <span class="optional">необязательно</span></label>
+              <input id="note" name="note" type="text" maxlength="100" autocomplete="off" placeholder="Например, обед">
+              <p class="field-error" id="note-error" role="alert" hidden></p>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="button" id="submit-button">Добавить трату</button>
+              <button type="button" class="button ghost" id="cancel-edit" hidden>Отмена</button>
+            </div>
+            <p class="field-error form-error" id="form-error" role="alert" hidden></p>
+          </form>
+        </section>
+
+        <section class="card hint-card">
+          <h2>Как считается</h2>
+          <p>Неделя — с понедельника по воскресенье, месяц и год — календарные. Блок «К прошлому периоду» сравнивает выбранный отрезок с таким же отрезком непосредственно перед ним.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <p class="visually-hidden" id="status" role="status" aria-live="polite"></p>
+
+  <noscript>
+    <p class="container noscript-note">Для работы сайта нужен включённый JavaScript.</p>
+  </noscript>
+</body>
+</html>
